@@ -89,9 +89,9 @@
             echo "→ Region          : us-gov-west-1 (GovCloud)"
             echo ""
 
-            echo "→ Installing graphify from Nix store into this shell..."
-            uv pip install "${graphifyPatched}" --quiet 2>/dev/null || \
-            pip install "${graphifyPatched}" --quiet
+            echo "→ Installing graphify + pdf + office extras from Nix store..."
+            uv pip install "${graphifyPatched}[pdf,office]" --quiet 2>/dev/null || \
+            pip install "${graphifyPatched}[pdf,office]" --quiet
 
             echo ""
             echo "✅ Ready."
