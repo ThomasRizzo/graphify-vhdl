@@ -90,8 +90,9 @@
             echo ""
 
             echo "→ Installing graphify + pdf + office extras from Nix store..."
-            uv pip install "${graphifyPatched}[pdf,office]" --quiet 2>/dev/null || \
-            pip install "${graphifyPatched}[pdf,office]" --quiet
+            # Use --break-system-packages because many corporate/Debian systems protect the system Python (PEP 668)
+            uv pip install --break-system-packages "${graphifyPatched}[pdf,office]" --quiet 2>/dev/null || \
+            pip install --break-system-packages "${graphifyPatched}[pdf,office]" --quiet
 
             echo ""
             echo "✅ Ready."
