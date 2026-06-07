@@ -1,5 +1,5 @@
 {
-  description = "One-command Nix setup: Graphify + full VHDL tree-sitter + AWS Bedrock GovCloud (Sonnet 4.5) — everything stays inside the shell (no home dir pollution)";
+  description = "Pure Nix: Graphify + VHDL tree-sitter + Bedrock GovCloud — everything (including source) lives in /nix/store";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -32,10 +32,29 @@
 
         vhdlExtractor = ./vhdl_extractor.py;
 
-        # Pure Nix wrapper — lives only inside this dev shell, nothing written to ~
+        # Fully patched graphify source — lives in /nix/store, immutable + cached
+        graphifyPatched = pkgs.applyPatches {
+          name = "graphify-with-vhdl";
+          src = graphify-src;
+
+          postPatch = ''
+            # Inject VHDL extractor
+            cp ${vhdlExtractor} graphify/vhdl_extractor.py
+
+            # Register .vhd/.vhdl as code files
+            sed -i 's|CODE_EXTENSIONS = {|CODE_EXTENSIONS = {\n    ".vhd", ".vhdl",|g' graphify/detect.py || true
+
+            # Wire the extractor into the dispatch
+            sed -i '/^from pathlib import Path/a from .vhdl_extractor import extract_vhdl' graphify/extract.py || true
+            sed -i '/^def extract(path: Path):/a\    ext = path.suffix.lower()\n    if ext in {\x22.vhd\x22, \x22.vhdl\x22}:\n        return extract_vhdl(path)' graphify/extract.py || true
+          '';
+        };
+
+        # Clean wrapper provided by Nix (no home dir writes)
         graphifyWrapper = pkgs.writeShellScriptBin "graphify" ''
           export GRAPHIFY_VHDL_GRAMMAR="${vhdlGrammar}/parser"
           export AWS_DEFAULT_REGION="us-gov-west-1"
+          export PYTHONPATH="${graphifyPatched}:${graphifyPatched}/graphify:$PYTHONPATH"
           exec ${python}/bin/python -m graphify.cli "$@"
         '';
 
@@ -48,7 +67,7 @@
             git
             ripgrep
             tree-sitter
-            graphifyWrapper   # <-- provides the `graphify` command cleanly
+            graphifyWrapper
           ];
 
           shellHook = ''
@@ -56,53 +75,35 @@
 
             export AWS_DEFAULT_REGION="us-gov-west-1"
             export GRAPHIFY_VHDL_GRAMMAR="${vhdlGrammar}/parser"
-
-            GRAPHIFY_DIR="$PWD/graphify"
+            export GRAPHIFY_SRC="${graphifyPatched}"
 
             echo ""
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "  Graphify + VHDL tree-sitter + Bedrock GovCloud"
-            echo "  Pure Nix shell (nothing touches your home directory)"
+            echo "  Graphify + VHDL (fully in /nix/store)"
+            echo "  Zero modification to working directory or home"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo ""
+            echo "→ Using patched graphify from Nix store:"
+            echo "   $GRAPHIFY_SRC"
+            echo ""
 
-            if [ ! -d "$GRAPHIFY_DIR" ]; then
-              echo "→ Cloning graphify (v8) into ./graphify ..."
-              git clone --depth 1 --branch v8 https://github.com/safishamsi/graphify.git "$GRAPHIFY_DIR"
-            fi
-
-            cd "$GRAPHIFY_DIR"
-
-            echo "→ Injecting VHDL tree-sitter support..."
-            cp -f "${vhdlExtractor}" graphify/vhdl_extractor.py
-
-            # Register extensions (idempotent)
-            grep -q ".vhd" graphify/detect.py || \
-              sed -i 's|CODE_EXTENSIONS = {|CODE_EXTENSIONS = {\n    ".vhd", ".vhdl",|g' graphify/detect.py || true
-
-            # Wire the extractor (idempotent)
-            if ! grep -q "from .vhdl_extractor import extract_vhdl" graphify/extract.py; then
-              sed -i '/^from pathlib import Path/a from .vhdl_extractor import extract_vhdl' graphify/extract.py || true
-              sed -i '/^def extract(path: Path):/a\    ext = path.suffix.lower()\n    if ext in {\x22.vhd\x22, \x22.vhdl\x22}:\n        return extract_vhdl(path)' graphify/extract.py || true
-            fi
-
-            echo "→ Installing with uv (editable)..."
-            uv pip install -e "[dev]" --quiet 2>/dev/null || uv pip install -e . --quiet
-
-            cd "$OLDPWD"
+            # Install graphify + deps from the store path (non-editable, clean)
+            echo "→ Installing graphify from Nix store into this shell..."
+            uv pip install "${graphifyPatched}" --quiet 2>/dev/null || \
+            pip install "${graphifyPatched}" --quiet
 
             echo ""
-            echo "✅ Ready. The 'graphify' command is provided by Nix (no ~/.local/bin pollution)."
+            echo "✅ Ready. 'graphify' command is provided by Nix."
             echo ""
-            echo "Usage:"
-            echo "  graphify /path/to/your-vhdl-repo"
+            echo "Usage on any VHDL repo:"
+            echo "  graphify /path/to/your-vhdl-project"
             echo "  graphify ."
             echo ""
-            echo "• VHDL files (.vhd/.vhdl) → tree-sitter structural extraction"
-            echo "• Other files → Bedrock Sonnet 4.5 semantic extraction"
-            echo "• Register with OpenCode:  graphify install --opencode"
+            echo "• .vhd/.vhdl → tree-sitter structural extraction (entities, architectures, processes...)"
+            echo "• Docs, diagrams, tests → Bedrock Sonnet 4.5 semantic extraction"
+            echo "• Register skill: graphify install --opencode"
             echo ""
-            echo "Everything lives inside this shell environment."
+            echo "Everything (grammar + patched source + command) lives in /nix/store."
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo ""
           '';
