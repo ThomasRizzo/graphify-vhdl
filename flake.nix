@@ -57,6 +57,7 @@
           export AWS_DEFAULT_REGION="us-gov-west-1"
           export GRAPHIFY_VHDL_GRAMMAR="${vhdlGrammar}/parser"
           export GRAPHIFY_MODEL="${bedrockModelId}"
+          export GRAPHIFY_BEDROCK_MODEL="${bedrockModelId}"
 
           if [ -d "$PWD/.venv" ]; then
             source "$PWD/.venv/bin/activate"
@@ -85,6 +86,7 @@
             export AWS_DEFAULT_REGION="us-gov-west-1"
             export GRAPHIFY_VHDL_GRAMMAR="${vhdlGrammar}/parser"
             export GRAPHIFY_MODEL="${bedrockModelId}"
+            export GRAPHIFY_BEDROCK_MODEL="${bedrockModelId}"
             export GRAPHIFY_SRC="${graphifyPatched}"
 
             echo ""
