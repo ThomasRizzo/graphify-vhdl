@@ -1,5 +1,5 @@
 {
-  description = "Pure Nix: Graphify + VHDL tree-sitter + Bedrock GovCloud Sonnet 4.5 — fully in /nix/store";
+  description = "Pure Nix: Graphify + VHDL tree-sitter + Bedrock GovCloud Claude Sonnet 4.5 — fully in /nix/store";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -24,10 +24,9 @@
 
         python = pkgs.python311;
 
-        # === CONFIGURE YOUR BEDROCK MODEL HERE ===
-        # This is the model Graphify will use for semantic extraction (docs, diagrams, testbenches, etc.)
-        # Update this to the exact Sonnet 4.5 (or whatever version you have access to) on GovCloud.
-        bedrockModelId = "anthropic.claude-3-5-sonnet-20241022-v2:0";
+        # Claude Sonnet 4.5 on AWS Bedrock (available in GovCloud via US-GOV Cross-Region Inference)
+        # Current model ID as of June 2026
+        bedrockModelId = "anthropic.claude-sonnet-4-5-20250929-v1:0";
 
         vhdlGrammar = pkgs.tree-sitter.buildGrammar {
           language = "vhdl";
@@ -37,7 +36,7 @@
 
         vhdlExtractor = ./vhdl_extractor.py;
 
-        # Fully patched graphify source — lives in /nix/store
+        # Fully patched graphify source — lives in /nix/store, immutable + cached
         graphifyPatched = pkgs.applyPatches {
           name = "graphify-with-vhdl";
           src = graphify-src;
@@ -50,7 +49,7 @@
           '';
         };
 
-        # Clean wrapper — sets region + model + grammar
+        # Clean wrapper — sets GovCloud region + Sonnet 4.5 model + VHDL grammar
         graphifyWrapper = pkgs.writeShellScriptBin "graphify" ''
           export AWS_DEFAULT_REGION="us-gov-west-1"
           export GRAPHIFY_VHDL_GRAMMAR="${vhdlGrammar}/parser"
@@ -81,32 +80,32 @@
 
             echo ""
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "  Graphify + VHDL + Bedrock GovCloud Sonnet 4.5"
-            echo "  Fully reproducible, everything in /nix/store"
+            echo "  Graphify + VHDL + Bedrock GovCloud Claude Sonnet 4.5"
+            echo "  Fully reproducible — everything lives in /nix/store"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo ""
-            echo "→ Graphify source: $GRAPHIFY_SRC"
-            echo "→ Bedrock model:   ${bedrockModelId}"
-            echo "→ Region:          us-gov-west-1"
+            echo "→ Graphify source : $GRAPHIFY_SRC"
+            echo "→ Bedrock model   : ${bedrockModelId}"
+            echo "→ Region          : us-gov-west-1 (GovCloud)"
             echo ""
 
-            echo "→ Installing graphify from Nix store..."
+            echo "→ Installing graphify from Nix store into this shell..."
             uv pip install "${graphifyPatched}" --quiet 2>/dev/null || \
             pip install "${graphifyPatched}" --quiet
 
             echo ""
             echo "✅ Ready."
             echo ""
-            echo "Run on any VHDL repo:"
+            echo "Usage on any VHDL repo:"
             echo "  graphify /path/to/your-vhdl-project"
             echo "  graphify ."
             echo ""
-            echo "• .vhd/.vhdl files → tree-sitter structural parsing"
-            echo "• Docs, diagrams, testbenches → Bedrock Sonnet 4.5"
+            echo "• .vhd / .vhdl files → tree-sitter structural extraction"
+            echo "• Docs, diagrams, testbenches → Bedrock Claude Sonnet 4.5"
             echo ""
-            echo "To change the model, edit 'bedrockModelId' at the top of flake.nix"
+            echo "To change the model ID, edit 'bedrockModelId' near the top of flake.nix"
             echo ""
-            echo "Register with OpenCode: graphify install --opencode"
+            echo "Register skill with OpenCode: graphify install --opencode"
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo ""
           '';
