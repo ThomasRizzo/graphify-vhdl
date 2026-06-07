@@ -49,13 +49,19 @@
           '';
         };
 
-        # Clean wrapper — sets GovCloud region + Sonnet 4.5 model + VHDL grammar
+        # Clean wrapper — uses local .venv if present, otherwise Nix Python
         graphifyWrapper = pkgs.writeShellScriptBin "graphify" ''
           export AWS_DEFAULT_REGION="us-gov-west-1"
           export GRAPHIFY_VHDL_GRAMMAR="${vhdlGrammar}/parser"
           export GRAPHIFY_MODEL="${bedrockModelId}"
-          export PYTHONPATH="${graphifyPatched}:${graphifyPatched}/graphify:$PYTHONPATH"
-          exec ${python}/bin/python -m graphify.cli "$@"
+
+          if [ -d "$PWD/.venv" ]; then
+            source "$PWD/.venv/bin/activate"
+          else
+            export PYTHONPATH="${graphifyPatched}:${graphifyPatched}/graphify:$PYTHONPATH"
+          fi
+
+          exec python -m graphify.cli "$@"
         '';
 
       in {
@@ -89,10 +95,15 @@
             echo "→ Region          : us-gov-west-1 (GovCloud)"
             echo ""
 
-            echo "→ Installing graphify + pdf + office extras from Nix store..."
-            # Use --break-system-packages because many corporate/Debian systems protect the system Python (PEP 668)
-            uv pip install --break-system-packages "${graphifyPatched}[pdf,office]" --quiet 2>/dev/null || \
-            pip install --break-system-packages "${graphifyPatched}[pdf,office]" --quiet
+            # Create an isolated virtual environment (clean, doesn't touch system Python)
+            if [ ! -d ".venv" ]; then
+              echo "→ Creating isolated Python environment (.venv)..."
+              uv venv --quiet
+            fi
+            source .venv/bin/activate
+
+            echo "→ Installing graphify + pdf + office extras into .venv..."
+            uv pip install "${graphifyPatched}[pdf,office]" --quiet
 
             echo ""
             echo "✅ Ready."
