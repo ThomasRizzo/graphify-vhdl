@@ -102,8 +102,16 @@
             fi
             source .venv/bin/activate
 
+            # Copy patched source out of the read-only Nix store so we can build it
+            GRAPHIFY_SRC_DIR="$PWD/.graphify-src"
+            rm -rf "$GRAPHIFY_SRC_DIR"
+            cp -r "${graphifyPatched}" "$GRAPHIFY_SRC_DIR"
+            chmod -R u+w "$GRAPHIFY_SRC_DIR"
+
             echo "→ Installing graphify + pdf + office extras into .venv..."
-            uv pip install "${graphifyPatched}[pdf,office]" --quiet
+            cd "$GRAPHIFY_SRC_DIR"
+            uv pip install ".[pdf,office]" --quiet
+            cd "$OLDPWD"
 
             echo ""
             echo "✅ Ready."
@@ -118,7 +126,7 @@
             echo "To change the model ID, edit 'bedrockModelId' near the top of flake.nix"
             echo ""
             echo "Register skill with OpenCode: graphify install --opencode"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo ""
           '';
         };
