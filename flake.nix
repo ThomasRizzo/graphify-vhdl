@@ -27,9 +27,9 @@
         # === Configuration ===
         enableBedrock = true;   # Set to false to skip installing the bedrock extra
 
-        # Claude Sonnet 4.5 on AWS Bedrock (available in GovCloud via US-GOV Cross-Region Inference)
-        # Current model ID as of June 2026
-        bedrockModelId = "anthropic.claude-sonnet-4-5-20250929-v1:0";
+        # Claude Sonnet 4.5 on AWS Bedrock GovCloud
+        # Use inference profile with us-gov prefix (required for GovCloud)
+        bedrockModelId = "us-gov.anthropic.claude-sonnet-4-5-20250929-v1:0";
 
         vhdlGrammar = pkgs.tree-sitter.buildGrammar {
           language = "vhdl";
