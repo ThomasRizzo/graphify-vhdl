@@ -24,6 +24,9 @@
 
         python = pkgs.python311;
 
+        # === Configuration ===
+        enableBedrock = true;   # Set to false to skip installing the bedrock extra
+
         # Claude Sonnet 4.5 on AWS Bedrock (available in GovCloud via US-GOV Cross-Region Inference)
         # Current model ID as of June 2026
         bedrockModelId = "anthropic.claude-sonnet-4-5-20250929-v1:0";
@@ -88,7 +91,7 @@
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo "  Graphify + VHDL + Bedrock GovCloud Claude Sonnet 4.5"
             echo "  Fully reproducible — everything lives in /nix/store"
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo ""
             echo "→ Graphify source : $GRAPHIFY_SRC"
             echo "→ Bedrock model   : ${bedrockModelId}"
@@ -108,9 +111,9 @@
             cp -r "${graphifyPatched}" "$GRAPHIFY_SRC_DIR"
             chmod -R u+w "$GRAPHIFY_SRC_DIR"
 
-            echo "→ Installing graphify + pdf + office extras into .venv..."
+            echo "→ Installing graphify + pdf + office${if enableBedrock then " + bedrock" else ""} extras into .venv..."
             cd "$GRAPHIFY_SRC_DIR"
-            uv pip install ".[pdf,office]" --quiet
+            uv pip install ".[pdf,office${if enableBedrock then ",bedrock" else ""}]" --quiet
             cd "$OLDPWD"
 
             echo ""
