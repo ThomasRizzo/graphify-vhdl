@@ -46,9 +46,16 @@
 
           postPatch = ''
             cp ${vhdlExtractor} graphify/vhdl_extractor.py
+
+            # VHDL support
             sed -i 's|CODE_EXTENSIONS = {|CODE_EXTENSIONS = {\n    ".vhd", ".vhdl",|g' graphify/detect.py || true
             sed -i '/^from pathlib import Path/a from .vhdl_extractor import extract_vhdl' graphify/extract.py || true
             sed -i '/^def extract(path: Path):/a\    ext = path.suffix.lower()\n    if ext in {\x22.vhd\x22, \x22.vhdl\x22}:\n        return extract_vhdl(path)' graphify/extract.py || true
+
+            # PowerShell module and manifest support (.psm1, .psd1)
+            sed -i 's|CODE_EXTENSIONS = {|CODE_EXTENSIONS = {\n    ".psm1", ".psd1",|g' graphify/detect.py || true
+            # Dispatch .psm1 and .psd1 to the existing PowerShell extractor (same grammar as .ps1)
+            sed -i '/if ext in {\x22.ps1\x22}:/a\    if ext in {\x22.psm1\x22, \x22.psd1\x22}:\n        return extract_powershell(path)' graphify/extract.py || true
           '';
         };
 
@@ -127,6 +134,7 @@
             echo ""
             echo "• .vhd / .vhdl files → tree-sitter structural extraction"
             echo "• Docs, diagrams, testbenches → Bedrock Claude Sonnet 4.5"
+            echo "• .ps1 / .psm1 / .psd1 files → PowerShell support"
             echo ""
             echo "To change the model ID, edit 'bedrockModelId' near the top of flake.nix"
             echo ""
